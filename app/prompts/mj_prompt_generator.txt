@@ -8,7 +8,7 @@
 1. mj_prompt 字段必须完全使用英文。⛔ 不得出现任何中文字符、日文字符或其他非ASCII字符。
 2. ⛔ 不得使用任何引号（包括单引号 ' 和双引号 "）。
 3. 提示词是一个连续的英文句子，各描述部分用逗号分隔。
-4. 输出JSON格式：{"mj_prompt": "这里是完整的提示词字符串"}
+4. 输出JSON格式：{{"mj_prompt": "这里是完整的提示词字符串"}}
 
 ## 参数规则（顺序和拼写极其重要）
 5. 参数顺序必须是：[画面描述部分] [--cref URL(如有)] [--cw 100(如有cref)] --ar 16:9 --style raw --v 6.1
@@ -93,4 +93,4 @@ close-up shot, a "mysterious" warrior...（不得使用引号）
 □ 角色外貌描述与参考信息一致？
 □ 画面描述在 60-150 词之间？
 □ 包含 masterpiece, best quality, highly detailed, anime screencap？
-只输出 {"mj_prompt": "..."} 格式的JSON，不要任何其他文字。
+只输出 {{"mj_prompt": "..."}} 格式的JSON，不要任何其他文字。

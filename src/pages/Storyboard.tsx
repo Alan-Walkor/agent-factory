@@ -16,7 +16,7 @@ const Storyboard = () => {
   const {
     currentProject, fetchProject,
     fetchStoryboards, updateStoryboardStatus, generateStoryboardImages,
-    isAgentRunning, agentProgress
+    uploadStoryboardImage, isAgentRunning, agentProgress
   } = useProjectStore()
   const { addToast } = useUIStore()
 
@@ -24,6 +24,7 @@ const Storyboard = () => {
   const [selectedChapter, setSelectedChapter] = useState<number | 'all'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPanels, setSelectedPanels] = useState<Set<string>>(new Set())
+  const [uploadUrl, setUploadUrl] = useState('')
   const [detailModal, setDetailModal] = useState<{
     open: boolean
     panel?: any
@@ -33,9 +34,9 @@ const Storyboard = () => {
 
   // 获取当前章节的分镜
   const getFilteredPanels = () => {
-    if (!currentProject?.storyboards) return []
+    if (!currentProject?.storyboard_panels) return []
 
-    let filtered = currentProject.storyboards
+    let filtered = currentProject.storyboard_panels
 
     // 过滤章节
     if (selectedChapter !== 'all') {
@@ -46,9 +47,9 @@ const Storyboard = () => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       filtered = filtered.filter(panel =>
-        panel.scene_description.toLowerCase().includes(term) ||
+        panel.visual_description.toLowerCase().includes(term) ||
         panel.mj_prompt.toLowerCase().includes(term) ||
-        panel.image_url?.toLowerCase().includes(term)
+        panel.generated_image_url?.toLowerCase().includes(term)
       )
     }
 
@@ -57,21 +58,21 @@ const Storyboard = () => {
 
   // 获取所有章节编号
   const getChapters = () => {
-    if (!currentProject?.storyboards) return []
-    return [...new Set(currentProject.storyboards.map(panel => panel.chapter_number))]
+    if (!currentProject?.storyboard_panels) return []
+    return [...new Set(currentProject.storyboard_panels.map(panel => panel.chapter_number))]
       .sort((a, b) => a - b)
   }
 
   // 统计信息
   const getStats = () => {
-    if (!currentProject?.storyboards) return { total: 0, approved: 0, pending: 0, rejected: 0 }
+    if (!currentProject?.storyboard_panels) return { total: 0, approved: 0, pending: 0, rejected: 0 }
 
-    const allPanels = currentProject.storyboards
+    const allPanels = currentProject.storyboard_panels
     return {
       total: allPanels.length,
-      approved: allPanels.filter(p => p.status === 'approved').length,
-      pending: allPanels.filter(p => p.status === 'pending').length,
-      rejected: allPanels.filter(p => p.status === 'rejected').length
+      approved: allPanels.filter(p => p.is_approved).length,
+      pending: allPanels.filter(p => !p.is_approved).length,
+      rejected: 0 // rejected panels are not stored separately, only those with is_approved = false
     }
   }
 
@@ -91,9 +92,9 @@ const Storyboard = () => {
     try {
       for (const panelId of panelIds) {
         if (bulkAction === 'approve') {
-          await updateStoryboardStatus(id!, panelId, 'approved')
+          await updateStoryboardStatus(id!, panelId, 'approved') // We assume this API handles is_approved flag appropriately
         } else if (bulkAction === 'reject') {
-          await updateStoryboardStatus(id!, panelId, 'rejected')
+          await updateStoryboardStatus(id!, panelId, 'rejected') // We assume this API handles rejection appropriately
         } else if (bulkAction === 'regenerate') {
           // 重新生成图片
           await generateStoryboardImages(id!, panelId)
@@ -316,7 +317,7 @@ const Storyboard = () => {
             key={panel.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`${
+            className={`relative ${
               viewMode === 'grid'
                 ? 'card-glow bg-[#1c1f30] rounded-xl border border-[#232640] overflow-hidden'
                 : 'card-glow bg-[#1c1f30] rounded-xl border border-[#232640] p-4'
@@ -348,21 +349,19 @@ const Storyboard = () => {
 
               {/* 状态标签 */}
               <span className={`px-2 py-1 text-xs rounded-full border text-xs ${
-                panel.status === 'approved'
+                panel.is_approved
                   ? 'bg-[#55efc4]/10 text-[#55efc4] border-[#55efc4]/20'
-                  : panel.status === 'rejected'
-                    ? 'bg-[#ff7675]/10 text-[#ff7675] border-[#ff7675]/20'
-                    : 'bg-[#fdcb6e]/10 text-[#fdcb6e] border-[#fdcb6e]/20'
+                  : 'bg-[#fdcb6e]/10 text-[#fdcb6e] border-[#fdcb6e]/20'
               }`}>
-                {panel.status === 'approved' ? '已批准' : panel.status === 'rejected' ? '已拒绝' : '待处理'}
+                {panel.is_approved ? '已批准' : '待处理'}
               </span>
             </div>
 
             {/* 图像区域 */}
             <div className="relative aspect-video bg-[#232640] rounded-lg overflow-hidden mb-4 mx-4">
-              {panel.image_url ? (
+              {panel.generated_image_url ? (
                 <img
-                  src={panel.image_url}
+                  src={panel.generated_image_url}
                   alt={`分镜 ${panel.id}`}
                   className="w-full h-full object-cover cursor-pointer"
                   onClick={() => setDetailModal({ open: true, panel, mode: 'view' })}
@@ -404,7 +403,7 @@ const Storyboard = () => {
 
             {/* 场景描述 */}
             <div className="px-4 mb-4">
-              <p className="text-sm text-[#e8e6f0] line-clamp-2">{panel.scene_description}</p>
+              <p className="text-sm text-[#e8e6f0] line-clamp-2">{panel.visual_description}</p>
             </div>
 
             {/* 动作按钮 */}
@@ -412,9 +411,9 @@ const Storyboard = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => handlePanelAction(panel.id, 'approve')}
-                  disabled={panel.status === 'approved'}
+                  disabled={panel.is_approved}
                   className={`flex-1 flex items-center justify-center gap-1 py-2 px-3 rounded-lg text-sm transition-colors ${
-                    panel.status === 'approved'
+                    panel.is_approved
                       ? 'bg-[#55efc4]/20 text-[#55efc4] cursor-not-allowed'
                       : 'bg-[#55efc4]/10 text-[#55efc4] hover:bg-[#55efc4]/20'
                   }`}
@@ -425,11 +424,9 @@ const Storyboard = () => {
 
                 <button
                   onClick={() => handlePanelAction(panel.id, 'reject')}
-                  disabled={panel.status === 'rejected'}
+                  disabled={false} /* Reject button always enabled since we don't store reject state separately */
                   className={`flex-1 flex items-center justify-center gap-1 py-2 px-3 rounded-lg text-sm transition-colors ${
-                    panel.status === 'rejected'
-                      ? 'bg-[#ff7675]/20 text-[#ff7675] cursor-not-allowed'
-                      : 'bg-[#ff7675]/10 text-[#ff7675] hover:bg-[#ff7675]/20'
+                    'bg-[#ff7675]/10 text-[#ff7675] hover:bg-[#ff7675]/20'
                   }`}
                 >
                   <X className="w-4 h-4" />
@@ -472,7 +469,7 @@ const Storyboard = () => {
                   <h3 className="text-lg font-medium text-[#e8e6f0]">
                     {detailModal.mode === 'view' ? '查看分镜' : '上传分镜图片'} - 第 {detailModal.panel.chapter_number} 章
                   </h3>
-                  <p className="text-sm text-[#9694a8]">{detailModal.panel.scene_description}</p>
+                  <p className="text-sm text-[#9694a8]">{detailModal.panel.visual_description}</p>
                 </div>
                 <button
                   onClick={() => setDetailModal({ open: false, mode: 'view' })}
@@ -489,9 +486,9 @@ const Storyboard = () => {
                     {/* 左侧：图片预览 */}
                     <div>
                       <h4 className="text-sm font-medium text-[#e8e6f0] mb-3">分镜图片</h4>
-                      {detailModal.panel.image_url ? (
+                      {detailModal.panel.generated_image_url ? (
                         <img
-                          src={detailModal.panel.image_url}
+                          src={detailModal.panel.generated_image_url}
                           alt="分镜预览"
                           className="w-full h-64 object-contain rounded-lg bg-[#232640] border border-[#232640]"
                         />
@@ -543,7 +540,7 @@ const Storyboard = () => {
                         <div>
                           <h5 className="text-sm font-medium text-[#e8e6f0] mb-2">角色引用</h5>
                           <div className="flex flex-wrap gap-2">
-                            {detailModal.panel.character_references?.map((ref, idx) => (
+                            {detailModal.panel.characters_in_frame?.map((ref, idx) => (
                               <span key={idx} className="px-2 py-1 bg-[#a29bfe]/10 text-[#a29bfe] text-xs rounded border border-[#a29bfe]/20">
                                 {ref}
                               </span>
@@ -554,9 +551,9 @@ const Storyboard = () => {
                         <div className="flex gap-4">
                           <button
                             onClick={() => handlePanelAction(detailModal.panel!.id, 'approve')}
-                            disabled={detailModal.panel?.status === 'approved'}
+                            disabled={detailModal.panel?.is_approved}
                             className={`flex-1 py-2 px-4 rounded-lg text-sm transition-colors ${
-                              detailModal.panel?.status === 'approved'
+                              detailModal.panel?.is_approved
                                 ? 'bg-[#55efc4]/20 text-[#55efc4] cursor-not-allowed'
                                 : 'bg-[#55efc4]/10 text-[#55efc4] hover:bg-[#55efc4]/20'
                             }`}
@@ -566,11 +563,9 @@ const Storyboard = () => {
 
                           <button
                             onClick={() => handlePanelAction(detailModal.panel!.id, 'reject')}
-                            disabled={detailModal.panel?.status === 'rejected'}
+                            disabled={false} /* Reject button always enabled since we don't store reject state separately */
                             className={`flex-1 py-2 px-4 rounded-lg text-sm transition-colors ${
-                              detailModal.panel?.status === 'rejected'
-                                ? 'bg-[#ff7675]/20 text-[#ff7675] cursor-not-allowed'
-                                : 'bg-[#ff7675]/10 text-[#ff7675] hover:bg-[#ff7675]/20'
+                              'bg-[#ff7675]/10 text-[#ff7675] hover:bg-[#ff7675]/20'
                             }`}
                           >
                             拒绝此分镜
@@ -588,6 +583,8 @@ const Storyboard = () => {
                       <label className="block text-sm font-medium text-[#e8e6f0] mb-2">图片URL</label>
                       <input
                         type="text"
+                        value={uploadUrl}
+                        onChange={(e) => setUploadUrl(e.target.value)}
                         placeholder="输入图片URL..."
                         className="w-full px-4 py-3 bg-[#232640] border border-[#232640] rounded-lg text-[#e8e6f0] placeholder-[#5c5a6e] focus:outline-none focus:ring-2 focus:ring-[#6c5ce7] focus:border-transparent"
                       />
@@ -608,10 +605,17 @@ const Storyboard = () => {
                         取消
                       </button>
                       <button
-                        onClick={() => {
-                          // 这里处理上传逻辑
-                          addToast('success', '图片上传成功')
-                          setDetailModal({ open: false, mode: 'view' })
+                        onClick={async () => {
+                          if (!uploadUrl.trim() || !detailModal.panel || !id) return
+                          try {
+                            await uploadStoryboardImage(id, detailModal.panel.id, uploadUrl.trim())
+                            addToast('success', '图片上传成功')
+                            setUploadUrl('')
+                            setDetailModal({ open: false, mode: 'view' })
+                            fetchProject(id)
+                          } catch (error) {
+                            addToast('error', '上传失败')
+                          }
                         }}
                         className="flex-1 py-3 px-4 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg hover:shadow-lg hover:shadow-[#6c5ce7]/20 transition-all"
                       >

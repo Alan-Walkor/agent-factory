@@ -11,14 +11,14 @@
 4. 每个场景的 scene_number 从1连续递增。
 
 ## dialogue 格式（极易出错的字段）
-5. dialogue 必须是一个数组，每个元素是一个对象：{"character": "角色名", "line": "台词内容"}
+5. dialogue 必须是一个数组，每个元素是一个对象：{{"character": "角色名", "line": "台词内容"}}
    ✅ 正确:
    [
-     {"character": "林逸", "line": "你到底是谁？"},
-     {"character": "柳青", "line": "一个和你一样，被这个世界抛弃的人。"}
+     {{"character": "林逸", "line": "你到底是谁？"}},
+     {{"character": "柳青", "line": "一个和你一样，被这个世界抛弃的人。"}}
    ]
    ⛔ 错误: "林逸说：你到底是谁？柳青回答：一个被抛弃的人。"（不能是字符串）
-   ⛔ 错误: [{"role": "林逸", "text": "你好"}]（key必须是character和line）
+   ⛔ 错误: [{{"role": "林逸", "text": "你好"}}]（key必须是character和line）
 6. dialogue 中的 character 必须使用角色的完整名字，与输入的角色列表完全一致。
 7. 每个场景0-8句对话。无对话的场景（如纯风景/内心独白），dialogue 为空数组 []。
 
@@ -64,7 +64,7 @@
 # 输出指令
 根据提供的章节大纲和上下文信息，编写完整的章节剧本JSON。
 输出前自检：
-□ dialogue 是数组格式 [{"character":"...","line":"..."}] ？
+□ dialogue 是数组格式 [{{"character":"...","line":"..."}}] ？
 □ 每个 description 有具体的视觉细节，不含抽象表达？
 □ 每个 camera_note 给出了具体的镜头类型或运动方式？
 □ action 描述的是可画出来的身体动作？

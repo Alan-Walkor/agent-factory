@@ -1,3 +1,9 @@
+import type { WorldSetting } from './world'
+import type { Character } from './character'
+import type { StoryOutline, ChapterScript } from './story'
+import type { StoryboardPanel } from './storyboard'
+import type { Asset } from './asset'
+
 /** 项目状态枚举 */
 export type ProjectStatus =
   | 'init'

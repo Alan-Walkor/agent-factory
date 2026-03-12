@@ -13,7 +13,8 @@ const AssetManager = () => {
   const { id } = useParams<{ id: string }>()
   const {
     currentProject, fetchProject,
-    pendingPanels, fetchPendingPanels
+    pendingPanels, fetchPendingPanels,
+    uploadStoryboardImage
   } = useProjectStore()
   const { addToast } = useUIStore()
 
@@ -78,22 +79,16 @@ const AssetManager = () => {
   // 上传待处理面板
   const handleUpload = async (panelId: string) => {
     const url = uploadedUrls[panelId]
-    if (!url) {
+    if (!url || !id) {
       addToast('warning', '请输入有效的图片URL')
       return
     }
-
     try {
-      // 这里应该调用实际的上传接口
-      // 模拟上传成功
+      await uploadStoryboardImage(id, panelId, url.trim())
       addToast('success', '图片上传成功')
       setUploadedUrls(prev => ({ ...prev, [panelId]: '' }))
-
-      // 重新获取数据
-      if (id) {
-        fetchPendingPanels(id)
-        fetchProject(id)
-      }
+      fetchPendingPanels(id)
+      fetchProject(id)
     } catch (error) {
       addToast('error', '上传失败')
     }

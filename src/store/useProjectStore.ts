@@ -38,7 +38,6 @@ interface ProjectState {
   fetchCharacterPrompts: (projectId: string) => Promise<void>
   fetchPanelPrompts: (projectId: string, chapter?: number) => Promise<void>
   fetchPendingPanels: (projectId: string) => Promise<void>
-  fetchStoryboards: (projectId: string) => Promise<void>
   uploadTurnaround: (projectId: string, characterName: string, urls: string[], prompt: string) => Promise<void>
   setReference: (projectId: string, characterName: string, url: string) => Promise<void>
   uploadStoryboardImage: (projectId: string, panelId: string, url: string) => Promise<void>
@@ -168,16 +167,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       const res = await projectApi.getPendingPanels(projectId)
       set({ pendingPanels: res.data })
-    } catch (e: any) {
-      set({ error: e.message })
-    }
-  },
-
-  fetchStoryboards: async (projectId: string) => {
-    try {
-      const res = await projectApi.getStoryboards(projectId)
-      // 合并数据到 currentProject 或单独存储
-      await get().fetchProject(projectId) // Refresh the full project data which includes storyboards
     } catch (e: any) {
       set({ error: e.message })
     }

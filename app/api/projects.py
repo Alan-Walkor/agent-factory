@@ -92,13 +92,20 @@ async def get_storyboards(project_id: str):
             "chapter_number": p.chapter_number,
             "scene_number": p.scene_number,
             "panel_number": p.panel_number,
-            "scene_description": p.scene_description,
             "visual_description": p.visual_description,
             "mj_prompt": p.mj_prompt,
-            "character_references": p.character_references,
+            "characters_in_frame": p.characters_in_frame,
+            "character_actions": p.character_actions,
+            "background": p.background,
+            "lighting": p.lighting,
+            "mood": p.mood,
+            "dialogue_overlay": p.dialogue_overlay,
+            "shot_type": p.shot_type.value if p.shot_type else "",
+            "duration_seconds": p.duration_seconds,
             "image_url": p.generated_image_url,
-            "status": "approved" if p.is_approved else "pending",  # Assuming pending if not approved
-            "created_at": p.created_at.isoformat() if p.created_at else None
+            "status": "approved" if p.is_approved else "pending",
+            "is_approved": p.is_approved,
+            "created_at": p.created_at.isoformat() if hasattr(p.created_at, 'isoformat') else str(p.created_at) if p.created_at else None
         }
         for p in sorted(project.storyboard_panels, key=lambda x: (x.chapter_number, x.panel_number))
     ]

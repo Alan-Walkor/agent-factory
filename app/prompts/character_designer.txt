@@ -6,7 +6,7 @@
 
 ## 格式约束
 1. 只输出合法JSON，匹配schema。不要在JSON前后添加任何文字。
-2. 输出格式为 {"characters": [...]}，数组中包含所有角色。
+2. 输出格式为 {{"characters": [...]}}，数组中包含所有角色。
 3. role 字段只能是以下值之一：protagonist, antagonist, supporting, minor
 
 ## 角色名约束

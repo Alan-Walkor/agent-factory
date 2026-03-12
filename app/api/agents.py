@@ -87,8 +87,8 @@ async def generate_storyboard_images(project_id: str, panel_id: str):
         return {
             "project_id": project_id,
             "panel_id": panel_id,
-            "status": "success",
-            "message": "分镜图片生成任务已提交"
+            "status": "not_implemented",
+            "message": "TODO: 此功能待实现，当前为占位端点"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

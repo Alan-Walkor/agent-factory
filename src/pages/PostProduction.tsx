@@ -18,6 +18,9 @@ const PostProduction = () => {
   } = useProjectStore()
   const { addToast } = useUIStore()
 
+  // 添加本地 state 存储剪辑脚本
+  const [editingScripts, setEditingScripts] = useState<any[]>([])
+
   // 加载项目数据
   useEffect(() => {
     if (id) {
@@ -41,7 +44,8 @@ const PostProduction = () => {
     if (!id) return
 
     try {
-      await runPhaseTwo(id)
+      const scripts = await runPhaseTwo(id)
+      setEditingScripts(scripts)
       addToast('success', '后期制作脚本生成完成！')
     } catch (error) {
       addToast('error', '后期制作启动失败')
@@ -98,9 +102,9 @@ const PostProduction = () => {
             </p>
           </div>
 
-          {currentProject.editing_scripts && currentProject.editing_scripts.length > 0 && (
+          {editingScripts && editingScripts.length > 0 && (
             <button
-              onClick={() => exportScript(currentProject.editing_scripts || [])}
+              onClick={() => exportScript(editingScripts)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#232640] text-[#e8e6f0] rounded-lg hover:bg-[#2d2f45] transition-colors"
             >
               <FileJson className="w-4 h-4" />
@@ -173,7 +177,7 @@ const PostProduction = () => {
       </motion.div>
 
       {/* 生成的剪辑脚本展示 */}
-      {currentProject.editing_scripts && currentProject.editing_scripts.length > 0 && (
+      {editingScripts && editingScripts.length > 0 && (
         <div>
           <h2 className="text-xl font-semibold text-[#e8e6f0] mb-4 flex items-center gap-2">
             <FileVideo className="w-5 h-5 text-[#00cec9]" />
@@ -181,9 +185,9 @@ const PostProduction = () => {
           </h2>
 
           <div className="space-y-6">
-            {currentProject.editing_scripts.map((script, index) => (
+            {editingScripts.map((script, index) => (
               <motion.div
-                key={script.id || index}
+                key={index}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="card-glow bg-[#1c1f30] rounded-xl border border-[#232640] overflow-hidden"
@@ -196,7 +200,7 @@ const PostProduction = () => {
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-[#9694a8] flex items-center gap-1">
                         <Clock className="w-4 h-4" />
-                        {script.duration}s
+                        {script.total_duration_seconds}s
                       </span>
                       <button
                         onClick={() => {
@@ -217,9 +221,9 @@ const PostProduction = () => {
                   <h4 className="text-sm font-medium text-[#e8e6f0] mb-3">片段时间线</h4>
                   <div className="overflow-x-auto pb-2">
                     <div className="flex gap-2 min-w-max">
-                      {script.scenes.map((scene, sceneIdx) => (
+                      {script.clips.map((clip, clipIdx) => (
                         <div
-                          key={scene.id || sceneIdx}
+                          key={clip.clip_number || clipIdx}
                           className="flex-shrink-0 bg-[#232640]/50 rounded-lg p-3 border border-[#232640] w-48"
                         >
                           <div className="flex items-center gap-2 mb-2">
@@ -227,23 +231,23 @@ const PostProduction = () => {
                               <Play className="w-4 h-4 text-[#9694a8]" />
                             </div>
                             <div>
-                              <div className="text-xs font-medium text-[#e8e6f0]">片段 {sceneIdx + 1}</div>
-                              <div className="text-xs text-[#9694a8]">{scene.duration}s</div>
+                              <div className="text-xs font-medium text-[#e8e6f0]">片段 {clipIdx + 1}</div>
+                              <div className="text-xs text-[#9694a8]">{clip.duration_seconds}s</div>
                             </div>
                           </div>
 
                           <div className="space-y-1 text-xs">
                             <div className="flex items-center gap-1">
                               <Repeat className="w-3 h-3 text-[#00cec9]" />
-                              <span className="text-[#9694a8]">转场: {scene.transition_effect}</span>
+                              <span className="text-[#9694a8]">转场: {clip.transition}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <Volume2 className="w-3 h-3 text-[#6c5ce7]" />
-                              <span className="text-[#9694a8]">音效: {scene.sound_effects?.join(', ') || '无'}</span>
+                              <span className="text-[#9694a8]">音效: {clip.sound_effect || '无'}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <Settings className="w-3 h-3 text-[#a29bfe]" />
-                              <span className="text-[#9694a8]">效果: {scene.motion_effect}</span>
+                              <span className="text-[#9694a8]">效果: {clip.ken_burns_effect}</span>
                             </div>
                           </div>
                         </div>
@@ -269,19 +273,19 @@ const PostProduction = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {script.scenes.map((scene, sceneIdx) => (
-                          <tr key={scene.id || sceneIdx} className="border-b border-[#232640]/50">
-                            <td className="py-2 text-[#e8e6f0]">片段 {sceneIdx + 1}</td>
+                        {script.clips.map((clip, clipIdx) => (
+                          <tr key={clip.clip_number || clipIdx} className="border-b border-[#232640]/50">
+                            <td className="py-2 text-[#e8e6f0]">片段 {clipIdx + 1}</td>
                             <td className="py-2">
                               <div className="w-10 h-10 bg-[#232640] rounded border border-[#232640] flex items-center justify-center">
                                 <FileVideo className="w-4 h-4 text-[#9694a8]" />
                               </div>
                             </td>
-                            <td className="py-2 text-[#e8e6f0]">{scene.duration}s</td>
-                            <td className="py-2 text-[#e8e6f0]">{scene.transition_effect}</td>
-                            <td className="py-2 text-[#e8e6f0]">{scene.subtitle_text?.substring(0, 20) || '-'}</td>
-                            <td className="py-2 text-[#e8e6f0]">{scene.sound_effects?.join(', ') || '无'}</td>
-                            <td className="py-2 text-[#e8e6f0]">{scene.motion_effect}</td>
+                            <td className="py-2 text-[#e8e6f0]">{clip.duration_seconds}s</td>
+                            <td className="py-2 text-[#e8e6f0]">{clip.transition}</td>
+                            <td className="py-2 text-[#e8e6f0]">{clip.subtitle?.substring(0, 20) || '-'}</td>
+                            <td className="py-2 text-[#e8e6f0]">{clip.sound_effect || '无'}</td>
+                            <td className="py-2 text-[#e8e6f0]">{clip.ken_burns_effect}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -295,7 +299,7 @@ const PostProduction = () => {
       )}
 
       {/* 如果没有生成脚本且不是运行中 */}
-      {!isAgentRunning && (!currentProject.editing_scripts || currentProject.editing_scripts.length === 0) && (
+      {!isAgentRunning && (!editingScripts || editingScripts.length === 0) && (
         <div className="text-center py-12">
           <FileVideo className="w-16 h-16 text-[#9694a8]/30 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-[#e8e6f0] mb-2">暂无剪辑脚本</h3>
