@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
-import { Globe, MapPin, Sparkles, Shield, BookOpen, Users, ArrowRight } from 'lucide-react'
+import { Globe, MapPin, Sparkles, Shield, BookOpen, Users, ArrowRight, Film, CheckCircle } from 'lucide-react'
 
 const WorldView = () => {
   const { id } = useParams<{ id: string }>()
@@ -11,7 +11,7 @@ const WorldView = () => {
     currentProject, fetchProject, isLoading,
     generateWorld, generateOutline, designCharacters,
     generateScriptAndStoryboard, generateStoryboardPrompts,
-    isAgentRunning, agentProgress
+    isAgentRunning, agentProgress, error
   } = useProjectStore()
   const { addToast } = useUIStore()
 
@@ -19,7 +19,7 @@ const WorldView = () => {
   const [totalChapters, setTotalChapters] = useState(12)
 
   useEffect(() => {
-    if (id) {
+    if (id && id !== 'undefined') {
       fetchProject(id)
     }
   }, [id])
@@ -276,9 +276,11 @@ const WorldView = () => {
                   </select>
                   <button
                     onClick={async () => {
+                      if (!id || id === 'undefined') { addToast('error', '项目ID无效'); return }
                       if (!storyRequirements.trim()) { addToast('warning', '请输入故事需求'); return }
-                      const ok = await generateOutline(id!, storyRequirements, totalChapters)
+                      const ok = await generateOutline(id, storyRequirements, totalChapters)
                       if (ok) addToast('success', '故事大纲生成完成！')
+                      else addToast('error', error || '故事大纲生成失败，请检查后台日志')
                     }}
                     disabled={isAgentRunning}
                     className="px-6 py-3 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg disabled:opacity-50"
@@ -296,14 +298,44 @@ const WorldView = () => {
                 <p className="text-[#9694a8] mb-4">根据世界观和故事大纲，AI将设计所有角色并生成MJ三视图提示词</p>
                 <button
                   onClick={async () => {
-                    const ok = await designCharacters(id!)
+                    if (!id || id === 'undefined') { addToast('error', '项目ID无效'); return }
+                    const ok = await designCharacters(id)
                     if (ok) addToast('success', '角色设计完成！请前往角色管理页上传三视图')
+                    else addToast('error', error || '角色设计失败，请检查后台日志')
                   }}
                   disabled={isAgentRunning}
                   className="px-6 py-3 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg disabled:opacity-50"
                 >
                   {isAgentRunning ? '设计中...' : '设计角色'}
                 </button>
+              </div>
+            )}
+
+            {/* 步骤4已完成：剧本+分镜生成结果 */}
+            {currentProject.chapter_scripts.length > 0 && (
+              <div className="card-glow bg-[#1c1f30] rounded-xl p-6 border border-[#55efc4]/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <CheckCircle className="w-5 h-5 text-[#55efc4]" />
+                  <h3 className="text-lg font-medium text-[#e8e6f0]">步骤四：剧本与分镜 — 已生成</h3>
+                </div>
+                <div className="flex flex-wrap gap-8 mb-5">
+                  <div>
+                    <p className="text-sm text-[#9694a8] mb-1">章节剧本</p>
+                    <p className="text-3xl font-bold text-[#e8e6f0]">{currentProject.chapter_scripts.length} <span className="text-sm font-normal text-[#9694a8]">章</span></p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#9694a8] mb-1">分镜面板</p>
+                    <p className="text-3xl font-bold text-[#e8e6f0]">{currentProject.storyboard_panels.length} <span className="text-sm font-normal text-[#9694a8]">个</span></p>
+                  </div>
+                </div>
+                <Link
+                  to={`/project/${id}/storyboard`}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg hover:shadow-lg hover:shadow-[#6c5ce7]/20 transition-all duration-300"
+                >
+                  <Film className="w-4 h-4" />
+                  <span>前往分镜工作台查看</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             )}
 
@@ -314,8 +346,10 @@ const WorldView = () => {
                 <p className="text-[#9694a8] mb-4">建议先在角色管理页上传MJ三视图并设置参考图，再执行此步骤。分镜会自动引用角色参考图URL（--cref）。</p>
                 <button
                   onClick={async () => {
-                    const ok = await generateScriptAndStoryboard(id!)
+                    if (!id || id === 'undefined') { addToast('error', '项目ID无效'); return }
+                    const ok = await generateScriptAndStoryboard(id)
                     if (ok) addToast('success', '剧本和分镜生成完成！')
+                    else addToast('error', error || '剧本和分镜生成失败，请检查后台日志')
                   }}
                   disabled={isAgentRunning}
                   className="px-6 py-3 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg disabled:opacity-50"
@@ -332,8 +366,9 @@ const WorldView = () => {
                 <p className="text-[#9694a8] mb-4">为所有分镜生成包含角色参考图（--cref）的MJ提示词</p>
                 <button
                   onClick={async () => {
+                    if (!id || id === 'undefined') { addToast('error', '项目ID无效'); return }
                     try {
-                      await generateStoryboardPrompts(id!)
+                      await generateStoryboardPrompts(id)
                       addToast('success', '分镜MJ提示词生成完成！')
                     } catch (e: any) {
                       addToast('error', e.message || '生成失败')

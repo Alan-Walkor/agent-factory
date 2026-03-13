@@ -10,7 +10,7 @@ const StoryOutline = () => {
   const [expandedChapter, setExpandedChapter] = useState<number | null>(null)
 
   useEffect(() => {
-    if (id) {
+    if (id && id !== 'undefined') {
       fetchProject(id)
     }
   }, [id])

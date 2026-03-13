@@ -95,6 +95,9 @@ class ChapterWriterAgent(BaseAgent):
             format_instructions=self.format_instructions
         )
 
+        # 移除 LLM 可能生成的自动字段（id/created_at），避免 datetime 解析失败
+        result.pop('id', None)
+        result.pop('created_at', None)
         return ChapterScript(**result)
 
     def _default_system_prompt(self) -> str:

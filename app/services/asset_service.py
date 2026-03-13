@@ -38,7 +38,11 @@ class AssetService:
         # 更新角色的三视图URL
         character.turnaround_image_urls = image_urls
 
-        # 创建资产记录
+        # 移除此角色旧的三视图资产记录，再重新写入
+        project.assets = [
+            a for a in project.assets
+            if not (a.character_id == character.id and a.asset_type == AssetType.CHARACTER_TURNAROUND)
+        ]
         for i, url in enumerate(image_urls):
             asset = Asset(
                 project_id=project_id,
@@ -77,7 +81,11 @@ class AssetService:
 
         character.reference_image_url = reference_url
 
-        # 创建资产记录
+        # 移除此角色旧的参考图记录，再写入新的
+        project.assets = [
+            a for a in project.assets
+            if not (a.character_id == character.id and a.asset_type == AssetType.CHARACTER_REFERENCE)
+        ]
         asset = Asset(
             project_id=project_id,
             asset_type=AssetType.CHARACTER_REFERENCE,

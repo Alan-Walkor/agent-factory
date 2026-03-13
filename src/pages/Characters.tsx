@@ -25,7 +25,7 @@ const Characters = () => {
   const [tempUrls, setTempUrls] = useState<Record<string, string[]>>({})
 
   useEffect(() => {
-    if (id) {
+    if (id && id !== 'undefined') {
       fetchProject(id)
       fetchCharacterPrompts(id)
     }
@@ -80,7 +80,8 @@ const Characters = () => {
 
     if (currentProject) {
       try {
-        await uploadTurnaround(id!, characterName, urls, '')
+        if (!id || id === 'undefined') { addToast('error', '项目ID无效'); return }
+        await uploadTurnaround(id, characterName, urls, '')
         setUploadInputs(prev => ({ ...prev, [characterName]: '' }))
         addToast('success', `已上传${characterName}的三视图`)
       } catch (error) {
@@ -93,7 +94,8 @@ const Characters = () => {
   const handleSetReference = async (characterName: string, url: string) => {
     if (currentProject) {
       try {
-        await setReference(id!, characterName, url)
+        if (!id || id === 'undefined') { addToast('error', '项目ID无效'); return }
+        await setReference(id, characterName, url)
         addToast('success', `已设置${characterName}的参考图`)
       } catch (error) {
         addToast('error', '设置参考图失败')
@@ -103,9 +105,11 @@ const Characters = () => {
 
   // 生成分镜提示词
   const handleGenerateStoryboardPrompts = async () => {
-    if (id) {
+    if (id && id !== 'undefined') {
       await generateStoryboardPrompts(id)
       addToast('success', '分镜MJ提示词已生成')
+    } else {
+      addToast('error', '项目ID无效')
     }
   }
 

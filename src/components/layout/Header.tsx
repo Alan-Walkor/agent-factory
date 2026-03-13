@@ -1,4 +1,4 @@
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import { Loader2 } from 'lucide-react'
@@ -6,7 +6,6 @@ import { motion } from 'framer-motion'
 
 const Header = () => {
   const location = useLocation()
-  const params = useParams()
   const { currentProject, isAgentRunning, agentProgress } = useProjectStore()
   const { sidebarCollapsed } = useUIStore()
 

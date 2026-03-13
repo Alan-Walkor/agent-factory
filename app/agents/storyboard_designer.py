@@ -3,7 +3,7 @@
 将章节剧本的每个场景拆解为多个分镜面板。
 """
 from app.agents.base_agent import BaseAgent
-from app.models.storyboard import StoryboardPanel
+from app.models.storyboard import StoryboardPanel, ShotType
 from app.models.story import ChapterScript, SceneDescription
 from pydantic import BaseModel, Field
 
@@ -61,10 +61,14 @@ class StoryboardDesignerAgent(BaseAgent):
         """拆解单个场景为分镜"""
         system_msg = self.prompt_text if self.prompt_text else self._default_system_prompt()
 
-        # 序列化对话信息
+        # 序列化对话信息（兼容 LLM 可能使用不同 key 的情况）
+        def _fmt_line(d: dict) -> str:
+            char = d.get('character') or d.get('角色') or d.get('name') or d.get('speaker') or '角色'
+            line = d.get('line') or d.get('台词') or d.get('text') or d.get('content') or ''
+            return f"  {char}：「{line}」"
+
         dialogue_text = "\n".join([
-            f"  {d['character']}：「{d['line']}」"
-            for d in scene.dialogue
+            _fmt_line(d) for d in scene.dialogue
         ]) if scene.dialogue else "（无对话）"
 
         human_msg = (
@@ -107,7 +111,23 @@ class StoryboardDesignerAgent(BaseAgent):
             format_instructions=self.format_instructions
         )
 
-        panels = [StoryboardPanel(**p) for p in result.get("panels", [])]
+        # 构建大小写不敏感映射表，保留正确的枚举值（如 "pov shot" → "POV shot"）
+        shot_type_lookup = {v.value.lower(): v.value for v in ShotType}
+
+        panels = []
+        for p in result.get("panels", []):
+            # 移除 LLM 生成的自动字段，使用模型默认值
+            p.pop('id', None)
+            p.pop('created_at', None)
+            # shot_type 大小写容错：小写匹配后还原为正确枚举值
+            if 'shot_type' in p and isinstance(p['shot_type'], str):
+                normalized = p['shot_type'].lower().strip()
+                p['shot_type'] = shot_type_lookup.get(normalized, normalized)
+            try:
+                panels.append(StoryboardPanel(**p))
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"跳过无效分镜面板: {e} | data={p}")
         return panels
 
     def _default_system_prompt(self) -> str:

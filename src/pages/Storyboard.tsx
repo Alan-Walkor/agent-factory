@@ -78,7 +78,7 @@ const Storyboard = () => {
 
   // 加载项目和分镜数据
   useEffect(() => {
-    if (id) {
+    if (id && id !== 'undefined') {
       fetchProject(id)
       fetchStoryboards(id)
     }
@@ -87,17 +87,18 @@ const Storyboard = () => {
   // 批量操作处理
   const handleBulkAction = async () => {
     if (!bulkAction || selectedPanels.size === 0) return
+    if (!id || id === 'undefined') { addToast('error', '项目ID无效'); return }
 
     const panelIds = Array.from(selectedPanels)
     try {
       for (const panelId of panelIds) {
         if (bulkAction === 'approve') {
-          await updateStoryboardStatus(id!, panelId, 'approved') // We assume this API handles is_approved flag appropriately
+          await updateStoryboardStatus(id, panelId, 'approved') // We assume this API handles is_approved flag appropriately
         } else if (bulkAction === 'reject') {
-          await updateStoryboardStatus(id!, panelId, 'rejected') // We assume this API handles rejection appropriately
+          await updateStoryboardStatus(id, panelId, 'rejected') // We assume this API handles rejection appropriately
         } else if (bulkAction === 'regenerate') {
           // 重新生成图片
-          await generateStoryboardImages(id!, panelId)
+          await generateStoryboardImages(id, panelId)
         }
       }
 
@@ -111,15 +112,16 @@ const Storyboard = () => {
 
   // 单个面板操作
   const handlePanelAction = async (panelId: string, action: 'approve' | 'reject' | 'regenerate') => {
+    if (!id || id === 'undefined') { addToast('error', '项目ID无效'); return }
     try {
       if (action === 'approve') {
-        await updateStoryboardStatus(id!, panelId, 'approved')
+        await updateStoryboardStatus(id, panelId, 'approved')
         addToast('success', '分镜已批准')
       } else if (action === 'reject') {
-        await updateStoryboardStatus(id!, panelId, 'rejected')
+        await updateStoryboardStatus(id, panelId, 'rejected')
         addToast('success', '分镜已拒绝')
       } else if (action === 'regenerate') {
-        await generateStoryboardImages(id!, panelId)
+        await generateStoryboardImages(id, panelId)
         addToast('success', '重新生成分镜图片')
       }
     } catch (error) {
@@ -312,6 +314,26 @@ const Storyboard = () => {
         animate={{ opacity: 1 }}
         className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-4'}
       >
+        {filteredPanels.length === 0 && (
+          <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+            <Grid3X3 className="w-16 h-16 text-[#6c5ce7]/30 mb-4" />
+            <h3 className="text-lg font-medium text-[#e8e6f0] mb-2">暂无分镜面板</h3>
+            <p className="text-sm text-[#9694a8] mb-4">
+              {currentProject.storyboard_panels.length === 0
+                ? '请先在世界观页面执行「步骤四：生成剧本与分镜」'
+                : '当前筛选条件下没有匹配的分镜面板'}
+            </p>
+            {currentProject.storyboard_panels.length === 0 && (
+              <Link
+                to={`/project/${id}`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg hover:shadow-lg hover:shadow-[#6c5ce7]/20 transition-all duration-300"
+              >
+                <ArrowRight className="w-4 h-4 rotate-180" />
+                <span>前往世界观页面生成</span>
+              </Link>
+            )}
+          </div>
+        )}
         {filteredPanels.map((panel) => (
           <motion.div
             key={panel.id}

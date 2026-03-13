@@ -1,4 +1,4 @@
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUIStore } from '@/store/useUIStore'
 import { useProjectStore } from '@/store/useProjectStore'
@@ -13,18 +13,11 @@ const Sidebar = () => {
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
   const { currentProject } = useProjectStore()
   const location = useLocation()
-  const params = useParams()
 
-  const routeNames: Record<string, string> = {
-    '/': '仪表盘',
-    '/create': '新建项目',
-    [`/project/${params.id}`]: '世界观',
-    [`/project/${params.id}/story`]: '故事大纲',
-    [`/project/${params.id}/characters`]: '角色管理',
-    [`/project/${params.id}/storyboard`]: '分镜工作台',
-    [`/project/${params.id}/assets`]: '资产管理',
-    [`/project/${params.id}/post`]: '后期制作',
-  }
+  // Extract project ID from the URL path since Sidebar is outside <Routes>
+  // and useParams() does not work here
+  const projectIdMatch = location.pathname.match(/^\/project\/([^/]+)/)
+  const projectId = projectIdMatch ? projectIdMatch[1] : undefined
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
@@ -48,14 +41,14 @@ const Sidebar = () => {
     { path: '/create', label: '新建项目', icon: PlusCircle },
   ]
 
-  const projectNav = [
-    { path: `/project/${params.id}`, label: '世界观', icon: Globe },
-    { path: `/project/${params.id}/story`, label: '故事大纲', icon: BookOpen },
-    { path: `/project/${params.id}/characters`, label: '角色管理', icon: Users },
-    { path: `/project/${params.id}/storyboard`, label: '分镜工作台', icon: Film },
-    { path: `/project/${params.id}/assets`, label: '资产管理', icon: ImageIcon },
-    { path: `/project/${params.id}/post`, label: '后期制作', icon: Scissors },
-  ]
+  const projectNav = projectId ? [
+    { path: `/project/${projectId}`, label: '世界观', icon: Globe },
+    { path: `/project/${projectId}/story`, label: '故事大纲', icon: BookOpen },
+    { path: `/project/${projectId}/characters`, label: '角色管理', icon: Users },
+    { path: `/project/${projectId}/storyboard`, label: '分镜工作台', icon: Film },
+    { path: `/project/${projectId}/assets`, label: '资产管理', icon: ImageIcon },
+    { path: `/project/${projectId}/post`, label: '后期制作', icon: Scissors },
+  ] : []
 
   return (
     <motion.aside
@@ -118,7 +111,7 @@ const Sidebar = () => {
         </div>
 
         {/* 项目导航分隔线 */}
-        {currentProject && (
+        {projectId && (
           <>
             <div className="my-4 border-t border-[#1c1f30]"></div>
             <div className="space-y-1">

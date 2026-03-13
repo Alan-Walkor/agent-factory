@@ -23,7 +23,7 @@ const PostProduction = () => {
 
   // 加载项目数据
   useEffect(() => {
-    if (id) {
+    if (id && id !== 'undefined') {
       fetchProject(id)
     }
   }, [id])

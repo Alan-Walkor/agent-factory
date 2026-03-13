@@ -1,6 +1,7 @@
 """Agent 调用 API 路由"""
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from app.orchestrator.pipeline import anime_pipeline
 
 router = APIRouter()
 
