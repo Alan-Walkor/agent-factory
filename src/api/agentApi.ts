@@ -22,6 +22,26 @@ export const agentApi = {
   runPhaseOne: (req: PhaseOneRequest) =>
     apiClient.post<PhaseOneResponse>('/agents/phase-one', req),
 
+  /** 单独生成世界观 */
+  generateWorld: (projectId: string, worldIdea: string) =>
+    apiClient.post('/agents/worldbuild', { project_id: projectId, world_idea: worldIdea }),
+
+  /** 单独生成故事大纲 */
+  generateOutline: (projectId: string, storyRequirements: string, totalChapters: number) =>
+    apiClient.post('/agents/outline', {
+      project_id: projectId,
+      story_requirements: storyRequirements,
+      total_chapters: totalChapters
+    }),
+
+  /** 单独设计角色 */
+  designCharacters: (projectId: string) =>
+    apiClient.post('/agents/design-characters', { project_id: projectId }),
+
+  /** 生成剧本+分镜 */
+  generateScriptAndStoryboard: (projectId: string) =>
+    apiClient.post('/agents/script-and-storyboard', { project_id: projectId }),
+
   /** 生成分镜MJ提示词（角色参考图设置完成后调用） */
   generateStoryboardPrompts: (projectId: string) =>
     apiClient.post<{ project_id: string; status: string; message: string; panel_count: number }>(

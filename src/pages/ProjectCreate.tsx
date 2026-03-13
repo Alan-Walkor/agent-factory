@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
+import { projectApi } from '@/api/projectApi'
 import {
   Sparkles, Globe, BookOpen, Users, FileText, Film, Wand2,
   Loader2, ChevronRight
@@ -10,57 +11,56 @@ import {
 
 const ProjectCreate = () => {
   const navigate = useNavigate()
-  const { runPhaseOne, isAgentRunning, agentProgress, error } = useProjectStore()
+  const { generateWorld, isAgentRunning, agentProgress, error } = useProjectStore()
   const { addToast } = useUIStore()
 
   const [form, setForm] = useState({
     projectName: '',
     worldIdea: '',
-    storyRequirements: '',
-    totalChapters: 12,
   })
 
   const handleSubmit = async () => {
-    if (!form.projectName.trim() || !form.worldIdea.trim() || !form.storyRequirements.trim()) {
-      addToast('warning', '请填写所有必填项')
+    if (!form.projectName.trim() || !form.worldIdea.trim()) {
+      addToast('warning', '请填写项目名称和世界观创意')
       return
     }
 
-    if (form.worldIdea.length < 50) {
+    if (form.worldIdea.length < 20) {
       addToast('warning', '世界观创意描述太简短，请详细一些')
       return
     }
 
-    if (form.storyRequirements.length < 50) {
-      addToast('warning', '故事需求描述太简短，请详细一些')
-      return
-    }
+    set({ isAgentRunning: true })
 
-    const projectId = await runPhaseOne({
-      project_name: form.projectName,
-      world_idea: form.worldIdea,
-      story_requirements: form.storyRequirements,
-      total_chapters: form.totalChapters,
-    })
+    try {
+      // 步骤1：创建项目
+      const createRes = await projectApi.create(form.projectName)
+      const projectId = createRes.data.project_id
 
-    if (projectId) {
-      addToast('success', '项目创建成功！AI已完成阶段一')
-      navigate(`/project/${projectId}`)
+      // 步骤2：生成世界观
+      const ok = await generateWorld(projectId, form.worldIdea)
+
+      if (ok) {
+        addToast('success', '项目创建成功，世界观已生成！')
+        navigate(`/project/${projectId}`)
+      }
+    } catch (e: any) {
+      addToast('error', e.message || '创建失败')
     }
   }
 
-  const handleChange = (field: keyof typeof form, value: string | number) => {
+  const handleChange = (field: keyof typeof form, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
   // 创建步骤配置
   const steps = [
+    { icon: Globe, title: '创建项目', desc: '初始化项目结构' },
     { icon: Globe, title: '构建世界观', desc: '设计完整的背景设定' },
-    { icon: BookOpen, title: '编排大纲', desc: '梳理故事脉络' },
-    { icon: Users, title: '设计角色', desc: '创建人物形象与设定' },
-    { icon: FileText, title: '编写剧本', desc: '撰写章节内容' },
-    { icon: Film, title: '拆解分镜', desc: '转化画面表现形式' },
-    { icon: Wand2, title: '生成提示词', desc: '为MJ生成准备素材' },
+    { icon: BookOpen, title: '编排大纲', desc: '后续在项目中完善' },
+    { icon: Users, title: '设计角色', desc: '后续在项目中完善' },
+    { icon: FileText, title: '编写剧本', desc: '后续在项目中完善' },
+    { icon: Film, title: '拆解分镜', desc: '后续在项目中完善' },
   ]
 
   return (
@@ -100,35 +100,18 @@ const ProjectCreate = () => {
               <p className="text-xs text-[#9694a8] mt-2">越详细越好：时代背景、魔法体系、社会结构、视觉风格</p>
             </div>
 
-            {/* 故事需求 */}
+            {/* 世界观创意 */}
             <div>
-              <label className="block text-sm font-medium text-[#e8e6f0] mb-2">故事需求 *</label>
+              <label className="block text-sm font-medium text-[#e8e6f0] mb-2">世界观创意 *</label>
               <textarea
-                value={form.storyRequirements}
-                onChange={(e) => handleChange('storyRequirements', e.target.value)}
-                placeholder={`描述你想要的故事类型和方向...\n例：主角是一个被家族驱逐的天才少年，在底层挣扎时意外获得了失落的上古机关术传承，踏上复仇与自我救赎的旅程...`}
+                value={form.worldIdea}
+                onChange={(e) => handleChange('worldIdea', e.target.value)}
+                placeholder={`描述你想要的世界观设定...\n例：一个将蒸汽朋克机械文明与东方仙侠修炼体系融合的世界。天空中漂浮着巨大的齿轮岛屿，修仙者需要同时掌握灵力和机械原理...`}
                 rows={6}
                 disabled={isAgentRunning}
                 className="w-full px-4 py-3 bg-[#1c1f30] border border-[#232640] rounded-lg text-[#e8e6f0] placeholder-[#5c5a6e] focus:outline-none focus:ring-2 focus:ring-[#6c5ce7] focus:border-transparent resize-none disabled:opacity-50"
               />
-              <p className="text-xs text-[#9694a8] mt-2">主角设定、故事主线、想要的风格和情感基调</p>
-            </div>
-
-            {/* 章节数量 */}
-            <div>
-              <label className="block text-sm font-medium text-[#e8e6f0] mb-2">章节数量</label>
-              <select
-                value={form.totalChapters}
-                onChange={(e) => handleChange('totalChapters', Number(e.target.value))}
-                disabled={isAgentRunning}
-                className="w-full px-4 py-3 bg-[#1c1f30] border border-[#232640] rounded-lg text-[#e8e6f0] focus:outline-none focus:ring-2 focus:ring-[#6c5ce7] focus:border-transparent disabled:opacity-50"
-              >
-                <option value={6}>6章（短篇）</option>
-                <option value={8}>8章</option>
-                <option value={12}>12章（标准）</option>
-                <option value={16}>16章</option>
-                <option value={24}>24章（长篇）</option>
-              </select>
+              <p className="text-xs text-[#9694a8] mt-2">越详细越好：时代背景、魔法体系、社会结构、视觉风格</p>
             </div>
 
             {/* 提交按钮 */}

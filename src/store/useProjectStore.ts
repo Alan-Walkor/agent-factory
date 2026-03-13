@@ -27,11 +27,16 @@ interface ProjectState {
   // Actions — 项目管理
   fetchProjects: () => Promise<void>
   fetchProject: (id: string) => Promise<void>
+  fetchStoryboards: (projectId: string) => Promise<void>
   deleteProject: (id: string) => Promise<void>
 
   // Actions — Agent 调用
   runPhaseOne: (req: PhaseOneRequest) => Promise<string | null>
   generateStoryboardPrompts: (projectId: string) => Promise<void>
+  generateWorld: (projectId: string, worldIdea: string) => Promise<boolean>
+  generateOutline: (projectId: string, storyRequirements: string, totalChapters: number) => Promise<boolean>
+  designCharacters: (projectId: string) => Promise<boolean>
+  generateScriptAndStoryboard: (projectId: string) => Promise<boolean>
   runPhaseTwo: (projectId: string) => Promise<any[]>
 
   // Actions — 资产管理
@@ -84,6 +89,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
+  fetchStoryboards: async (projectId: string) => {
+    try {
+      const res = await projectApi.getStoryboards(projectId)
+      const current = get().currentProject
+      if (current) {
+        set({ currentProject: { ...current, storyboard_panels: res.data } })
+      }
+    } catch (e: any) {
+      set({ error: e.message })
+    }
+  },
+
   deleteProject: async (id: string) => {
     try {
       await projectApi.delete(id)
@@ -113,6 +130,58 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     } catch (e: any) {
       set({ error: e.message, isAgentRunning: false, agentProgress: '' })
       return null
+    }
+  },
+
+  generateWorld: async (projectId, worldIdea) => {
+    set({ isAgentRunning: true, agentProgress: '正在构建世界观...', error: null })
+    try {
+      const res = await agentApi.generateWorld(projectId, worldIdea)
+      set({ isAgentRunning: false, agentProgress: '世界观生成完成！' })
+      await get().fetchProject(projectId)
+      return true
+    } catch (e: any) {
+      set({ error: e.message, isAgentRunning: false, agentProgress: '' })
+      return false
+    }
+  },
+
+  generateOutline: async (projectId, storyRequirements, totalChapters) => {
+    set({ isAgentRunning: true, agentProgress: '正在编排故事大纲...', error: null })
+    try {
+      const res = await agentApi.generateOutline(projectId, storyRequirements, totalChapters)
+      set({ isAgentRunning: false, agentProgress: '故事大纲生成完成！' })
+      await get().fetchProject(projectId)
+      return true
+    } catch (e: any) {
+      set({ error: e.message, isAgentRunning: false, agentProgress: '' })
+      return false
+    }
+  },
+
+  designCharacters: async (projectId) => {
+    set({ isAgentRunning: true, agentProgress: '正在设计角色...', error: null })
+    try {
+      const res = await agentApi.designCharacters(projectId)
+      set({ isAgentRunning: false, agentProgress: '角色设计完成！' })
+      await get().fetchProject(projectId)
+      return true
+    } catch (e: any) {
+      set({ error: e.message, isAgentRunning: false, agentProgress: '' })
+      return false
+    }
+  },
+
+  generateScriptAndStoryboard: async (projectId) => {
+    set({ isAgentRunning: true, agentProgress: '正在生成剧本和分镜...', error: null })
+    try {
+      const res = await agentApi.generateScriptAndStoryboard(projectId)
+      set({ isAgentRunning: false, agentProgress: '剧本和分镜生成完成！' })
+      await get().fetchProject(projectId)
+      return true
+    } catch (e: any) {
+      set({ error: e.message, isAgentRunning: false, agentProgress: '' })
+      return false
     }
   },
 

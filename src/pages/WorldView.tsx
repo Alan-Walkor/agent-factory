@@ -1,12 +1,22 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useUIStore } from '@/store/useUIStore'
 import { Globe, MapPin, Sparkles, Shield, BookOpen, Users, ArrowRight } from 'lucide-react'
 
 const WorldView = () => {
   const { id } = useParams<{ id: string }>()
-  const { currentProject, fetchProject, isLoading } = useProjectStore()
+  const {
+    currentProject, fetchProject, isLoading,
+    generateWorld, generateOutline, designCharacters,
+    generateScriptAndStoryboard, generateStoryboardPrompts,
+    isAgentRunning, agentProgress
+  } = useProjectStore()
+  const { addToast } = useUIStore()
+
+  const [storyRequirements, setStoryRequirements] = useState('')
+  const [totalChapters, setTotalChapters] = useState(12)
 
   useEffect(() => {
     if (id) {
@@ -227,6 +237,123 @@ const WorldView = () => {
           )}
         </motion.div>
       </div>
+
+      {/* 分步操作面板 */}
+      {currentProject && currentProject.world_setting && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mb-8"
+        >
+          <h2 className="text-xl font-semibold text-[#e8e6f0] mb-4">创作流水线</h2>
+          <div className="space-y-4">
+
+            {/* 步骤2：生成故事大纲 */}
+            {!currentProject.story_outline && (
+              <div className="card-glow bg-[#1c1f30] rounded-xl p-6 border border-[#232640]">
+                <h3 className="text-lg font-medium text-[#e8e6f0] mb-4">步骤二：生成故事大纲</h3>
+                <textarea
+                  value={storyRequirements}
+                  onChange={(e) => setStoryRequirements(e.target.value)}
+                  placeholder="描述你想要的故事类型和方向..."
+                  rows={4}
+                  disabled={isAgentRunning}
+                  className="w-full px-4 py-3 bg-[#232640] border border-[#232640] rounded-lg text-[#e8e6f0] placeholder-[#5c5a6e] focus:outline-none focus:ring-2 focus:ring-[#6c5ce7] resize-none disabled:opacity-50 mb-4"
+                />
+                <div className="flex items-center gap-4">
+                  <select
+                    value={totalChapters}
+                    onChange={(e) => setTotalChapters(Number(e.target.value))}
+                    disabled={isAgentRunning}
+                    className="px-4 py-3 bg-[#232640] border border-[#232640] rounded-lg text-[#e8e6f0] focus:outline-none focus:ring-2 focus:ring-[#6c5ce7] disabled:opacity-50"
+                  >
+                    <option value={6}>6章</option>
+                    <option value={8}>8章</option>
+                    <option value={12}>12章</option>
+                    <option value={16}>16章</option>
+                    <option value={24}>24章</option>
+                  </select>
+                  <button
+                    onClick={async () => {
+                      if (!storyRequirements.trim()) { addToast('warning', '请输入故事需求'); return }
+                      const ok = await generateOutline(id!, storyRequirements, totalChapters)
+                      if (ok) addToast('success', '故事大纲生成完成！')
+                    }}
+                    disabled={isAgentRunning}
+                    className="px-6 py-3 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg disabled:opacity-50"
+                  >
+                    {isAgentRunning ? '生成中...' : '生成故事大纲'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 步骤3：设计角色 */}
+            {currentProject.story_outline && currentProject.characters.length === 0 && (
+              <div className="card-glow bg-[#1c1f30] rounded-xl p-6 border border-[#232640]">
+                <h3 className="text-lg font-medium text-[#e8e6f0] mb-4">步骤三：设计角色</h3>
+                <p className="text-[#9694a8] mb-4">根据世界观和故事大纲，AI将设计所有角色并生成MJ三视图提示词</p>
+                <button
+                  onClick={async () => {
+                    const ok = await designCharacters(id!)
+                    if (ok) addToast('success', '角色设计完成！请前往角色管理页上传三视图')
+                  }}
+                  disabled={isAgentRunning}
+                  className="px-6 py-3 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg disabled:opacity-50"
+                >
+                  {isAgentRunning ? '设计中...' : '设计角色'}
+                </button>
+              </div>
+            )}
+
+            {/* 步骤4：生成剧本+分镜 */}
+            {currentProject.characters.length > 0 && currentProject.chapter_scripts.length === 0 && (
+              <div className="card-glow bg-[#1c1f30] rounded-xl p-6 border border-[#232640]">
+                <h3 className="text-lg font-medium text-[#e8e6f0] mb-4">步骤四：生成剧本与分镜</h3>
+                <p className="text-[#9694a8] mb-4">建议先在角色管理页上传MJ三视图并设置参考图，再执行此步骤。分镜会自动引用角色参考图URL（--cref）。</p>
+                <button
+                  onClick={async () => {
+                    const ok = await generateScriptAndStoryboard(id!)
+                    if (ok) addToast('success', '剧本和分镜生成完成！')
+                  }}
+                  disabled={isAgentRunning}
+                  className="px-6 py-3 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg disabled:opacity-50"
+                >
+                  {isAgentRunning ? '生成中...' : '生成剧本与分镜'}
+                </button>
+              </div>
+            )}
+
+            {/* 步骤5：生成分镜MJ提示词（含--cref） */}
+            {currentProject.storyboard_panels.length > 0 && (
+              <div className="card-glow bg-[#1c1f30] rounded-xl p-6 border border-[#232640]">
+                <h3 className="text-lg font-medium text-[#e8e6f0] mb-4">步骤五：生成分镜MJ提示词</h3>
+                <p className="text-[#9694a8] mb-4">为所有分镜生成包含角色参考图（--cref）的MJ提示词</p>
+                <button
+                  onClick={async () => {
+                    try {
+                      await generateStoryboardPrompts(id!)
+                      addToast('success', '分镜MJ提示词生成完成！')
+                    } catch (e: any) {
+                      addToast('error', e.message || '生成失败')
+                    }
+                  }}
+                  disabled={isAgentRunning}
+                  className="px-6 py-3 bg-gradient-to-r from-[#6c5ce7] to-[#00cec9] text-white rounded-lg disabled:opacity-50"
+                >
+                  {isAgentRunning ? '生成中...' : '生成分镜MJ提示词'}
+                </button>
+              </div>
+            )}
+
+            {/* Agent进度显示 */}
+            {isAgentRunning && (
+              <div className="text-center text-sm text-[#9694a8] py-2">{agentProgress}</div>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* 底部操作 */}
       <motion.div
